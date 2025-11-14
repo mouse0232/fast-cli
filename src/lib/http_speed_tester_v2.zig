@@ -156,9 +156,20 @@ pub const HTTPSpeedTester = struct {
             var client = speed_worker.RealHttpClient.init(self.allocator);
             defer client.deinit();
 
+            // Record start time
+            const start_time = timer.timer_interface().read();
+
             const result = try speed_worker.simpleDownloadTest(urls[0], &should_stop, client.httpClient(), timer.timer_interface(), strategy.target_duration_ns, self.allocator);
 
-            return SpeedTestResult.fromBytesPerSecond(@as(f64, @floatFromInt(result)));
+            // Record end time
+            const end_time = timer.timer_interface().read();
+            const actual_duration_ns = end_time - start_time;
+
+            // Calculate bytes per second
+            const actual_duration_s = @as(f64, @floatFromInt(actual_duration_ns)) / std.time.ns_per_s;
+            const bytes_per_second = if (actual_duration_s > 0) @as(f64, @floatFromInt(result)) / actual_duration_s else 0;
+
+            return SpeedTestResult.fromBytesPerSecond(bytes_per_second);
         }
 
         // Setup download workers
@@ -317,9 +328,20 @@ pub const HTTPSpeedTester = struct {
             var client = speed_worker.RealHttpClient.init(self.allocator);
             defer client.deinit();
 
+            // Record start time
+            const start_time = timer.timer_interface().read();
+
             const result = try speed_worker.simpleDownloadTest(urls[0], &should_stop, client.httpClient(), timer.timer_interface(), strategy.max_duration_ns, self.allocator);
 
-            return SpeedTestResult.fromBytesPerSecond(@as(f64, @floatFromInt(result)));
+            // Record end time
+            const end_time = timer.timer_interface().read();
+            const actual_duration_ns = end_time - start_time;
+
+            // Calculate bytes per second
+            const actual_duration_s = @as(f64, @floatFromInt(actual_duration_ns)) / std.time.ns_per_s;
+            const bytes_per_second = if (actual_duration_s > 0) @as(f64, @floatFromInt(result)) / actual_duration_s else 0;
+
+            return SpeedTestResult.fromBytesPerSecond(bytes_per_second);
         }
 
         // Setup download workers

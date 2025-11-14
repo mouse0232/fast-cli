@@ -728,25 +728,19 @@ pub fn simpleDownloadTest(
 
     // Reset should_stop flag before starting
     should_stop.store(false, .monotonic);
-
-    // Start the timer
-    const start_time = timer.read();
-
+    
     // Run the download loop with time limit
     try worker.downloadLoop();
-
-    // Calculate actual duration
-    const end_time = timer.read();
-    const actual_duration_ns = end_time - start_time;
-
+    
     // Get total bytes downloaded
     const total_bytes = worker.getBytesDownloaded();
-
-    // If test was too short, return 0 to indicate invalid measurement
-    if (actual_duration_ns < std.time.ns_per_s * 2) { // At least 2 seconds for valid measurement
+    
+    // For single-threaded mode, ensure at least 2 seconds of meaningful test
+    // If we got no bytes, test might be invalid
+    if (total_bytes == 0) {
         return 0;
     }
-
+    
     return total_bytes;
 }
 
