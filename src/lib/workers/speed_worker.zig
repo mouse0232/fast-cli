@@ -728,19 +728,19 @@ pub fn simpleDownloadTest(
 
     // Reset should_stop flag before starting
     should_stop.store(false, .monotonic);
-    
+
     // Run the download loop with time limit
     try worker.downloadLoop();
-    
+
     // Get total bytes downloaded
     const total_bytes = worker.getBytesDownloaded();
-    
+
     // For single-threaded mode, ensure at least 2 seconds of meaningful test
     // If we got no bytes, test might be invalid
     if (total_bytes == 0) {
         return 0;
     }
-    
+
     return total_bytes;
 }
 
