@@ -405,7 +405,7 @@ pub const RealHttpClient = struct {
             .ptr = self,
             .vtable = &HttpClient.VTable{
                 .fetch = fetch,
-                .deinit = deinit,
+                .deinit = deinitVTable,
             },
         };
     }
@@ -515,7 +515,7 @@ pub const MockHttpClient = struct {
     pub fn httpClient(self: *Self) HttpClient {
         return HttpClient{
             .ptr = self,
-            .vtable = &.{
+            .vtable = &HttpClient.VTable{
                 .fetch = fetch,
                 .deinit = mockDeinit,
             },
