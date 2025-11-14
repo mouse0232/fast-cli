@@ -5,7 +5,7 @@ const http = std.http;
 pub const IPv6HttpClient = struct {
     allocator: std.mem.Allocator,
     use_ipv6: bool = false,
-    
+
     const Self = @This();
 
     pub fn init(allocator: std.mem.Allocator) Self {
@@ -24,15 +24,15 @@ pub const IPv6HttpClient = struct {
 
     /// Create a new HTTP client with IPv6 support configuration
     pub fn createClient(self: *Self) http.Client {
-        var client = http.Client{ .allocator = self.allocator };
-        
+        const client = http.Client{ .allocator = self.allocator };
+
         // Configure IPv6 if enabled
         if (self.use_ipv6) {
             // Note: In Zig 0.14.1, we need to handle IPv6 at the connection level
             // This is a placeholder for future IPv6 configuration
             // Currently Zig's HTTP client doesn't provide direct IP version control
         }
-        
+
         return client;
     }
 
