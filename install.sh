@@ -13,7 +13,7 @@ DEFAULT_INSTALL_DIR="/usr/local/bin"
 INSTALL_DIR="${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
 
 # GitHub repository
-REPO="mikkelam/fast-cli"
+REPO="mouse0232/fast-cli"
 BINARY_NAME="fast-cli"
 
 # Print colored output
