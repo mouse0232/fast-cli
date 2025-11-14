@@ -670,3 +670,61 @@ test "MockTimer functionality" {
     timer.advance(500);
     try testing.expectEqual(@as(u64, 1500), timer_interface.read());
 }
+
+pub fn simpleDownloadTest(
+    url: []const u8,
+    should_stop: *std.atomic.Value(bool),
+    client: HttpClient,
+    timer: Timer,
+    target_duration_ns: u64,
+    allocator: std.mem.Allocator,
+) !u64 {
+    var worker = DownloadWorker.init(
+        WorkerConfig{
+            .worker_id = 0,
+            .url = url,
+            .chunk_size = 1024 * 1024, // 1MB chunks
+            .delay_between_requests_ms = 0,
+            .max_retries = 3,
+        },
+        should_stop,
+        client,
+        timer,
+        target_duration_ns,
+        allocator,
+    );
+    defer worker.deinit();
+
+    try worker.downloadLoop();
+    return worker.getBytesDownloaded();
+}
+
+pub fn simpleUploadTest(
+    url: []const u8,
+    upload_data: []const u8,
+    should_stop: *std.atomic.Value(bool),
+    client: HttpClient,
+    timer: Timer,
+    target_duration_ns: u64,
+    allocator: std.mem.Allocator,
+) !u64 {
+    var worker = UploadWorker.init(
+        WorkerConfig{
+            .worker_id = 0,
+            .url = url,
+            .chunk_size = 0,
+            .delay_between_requests_ms = 0,
+            .max_retries = 3,
+        },
+        should_stop,
+        client,
+        timer,
+        target_duration_ns,
+        upload_data,
+        allocator,
+    );
+    defer worker.deinit();
+
+    try worker.uploadLoop();
+    return worker.getBytesUploaded();
+}
