@@ -403,11 +403,36 @@ pub const RealHttpClient = struct {
     pub fn httpClient(self: *Self) HttpClient {
         return HttpClient{
             .ptr = self,
-            .vtable = &.{
-                .fetch = fetch,
-                .deinit = deinit,
+            .vtable = HttpClient.VTable{
+                .fetch = fetchSelf,
+                .deinit = deinitSelf,
             },
         };
+    }
+
+    fn fetchSelf(self: *Self, request: FetchRequest) !FetchResponse {
+        var response_body = std.ArrayList(u8).init(self.allocator);
+        errdefer response_body.deinit();
+
+        const fetch_options = http.Client.FetchOptions{
+            .method = request.method,
+            .location = .{ .url = request.url },
+            .payload = if (request.payload) |p| p else null,
+            .response_storage = .{ .dynamic = &response_body },
+            .max_append_size = request.max_response_size,
+        };
+
+        const result = try self.client.fetch(fetch_options);
+
+        return FetchResponse{
+            .status = result.status,
+            .body = try response_body.toOwnedSlice(),
+            .allocator = self.allocator,
+        };
+    }
+
+    fn deinitSelf(self: *Self) void {
+        self.client.deinit();
     }
 
     fn fetch(ptr: *anyopaque, request: FetchRequest) !FetchResponse {
