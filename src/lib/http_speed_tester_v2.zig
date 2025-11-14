@@ -399,7 +399,7 @@ pub const HTTPSpeedTester = struct {
             var client = speed_worker.RealHttpClient.init(self.allocator);
             defer client.deinit();
 
-            const result = try speed_worker.simpleUploadTest(urls[0], upload_data, &should_stop, client.httpClient(), timer.timer_interface(), strategy.target_duration_ns, self.allocator);
+            const result = try speed_worker.simpleUploadTest(urls[0], upload_data, &should_stop, client.httpClient(), timer.timer_interface(), strategy.max_duration_ns, self.allocator);
 
             return SpeedTestResult.fromBytesPerSecond(@as(f64, @floatFromInt(result)));
         }
