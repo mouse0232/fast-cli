@@ -149,9 +149,23 @@ pub const HTTPSpeedTester = struct {
         }
 
         // Setup worker manager
-        const num_workers = if (self.concurrent_connections == 0) 1 else @min(urls.len, self.concurrent_connections);
+        const num_workers = if (self.concurrent_connections == 0) 0 else @min(urls.len, self.concurrent_connections);
         var worker_manager = try WorkerManager.init(self.allocator, &should_stop, num_workers);
         defer worker_manager.deinit();
+        // Handle zero workers case (single-threaded mode)
+        if (num_workers == 0) {
+            var single_thread_meter = BandwidthMeter.init();
+            if (has_progress) {
+                try single_thread_meter.start();
+            }
+
+            var client = speed_worker.RealHttpClient.init(self.allocator);
+            defer client.deinit();
+
+            const result = try speed_worker.singleThreadedDownloadTest(urls[0], &should_stop, client.httpClient(), timer.timer_interface(), strategy.target_duration_ns, if (has_progress) progress_callback else null);
+
+            return SpeedTestResult.fromBytesPerSecond(result);
+        }
 
         // Setup download workers
         const workers = try worker_manager.setupDownloadWorkers(
@@ -215,9 +229,24 @@ pub const HTTPSpeedTester = struct {
         }
 
         // Setup worker manager
-        const num_workers = if (self.concurrent_connections == 0) 1 else @min(urls.len, self.concurrent_connections);
+        const num_workers = if (self.concurrent_connections == 0) 0 else @min(urls.len, self.concurrent_connections);
         var worker_manager = try WorkerManager.init(self.allocator, &should_stop, num_workers);
         defer worker_manager.deinit();
+
+        // Handle zero workers case (single-threaded mode)
+        if (num_workers == 0) {
+            var single_thread_meter = BandwidthMeter.init();
+            if (has_progress) {
+                try single_thread_meter.start();
+            }
+
+            var client = speed_worker.RealHttpClient.init(self.allocator);
+            defer client.deinit();
+
+            const result = try speed_worker.singleThreadedUploadTest(urls[0], upload_data, &should_stop, client.httpClient(), timer.timer_interface(), strategy.max_duration_ns, if (has_progress) progress_callback else null);
+
+            return SpeedTestResult.fromBytesPerSecond(result);
+        }
 
         // Setup upload workers
         const workers = try worker_manager.setupUploadWorkers(
@@ -280,9 +309,24 @@ pub const HTTPSpeedTester = struct {
         }
 
         // Setup worker manager
-        const num_workers = if (self.concurrent_connections == 0) 1 else @min(urls.len, self.concurrent_connections);
+        const num_workers = if (self.concurrent_connections == 0) 0 else @min(urls.len, self.concurrent_connections);
         var worker_manager = try WorkerManager.init(self.allocator, &should_stop, num_workers);
         defer worker_manager.deinit();
+
+        // Handle zero workers case (single-threaded mode)
+        if (num_workers == 0) {
+            var single_thread_meter = BandwidthMeter.init();
+            if (has_progress) {
+                try single_thread_meter.start();
+            }
+
+            var client = speed_worker.RealHttpClient.init(self.allocator);
+            defer client.deinit();
+
+            const result = try speed_worker.singleThreadedDownloadTest(urls[0], &should_stop, client.httpClient(), timer.timer_interface(), strategy.max_duration_ns, if (has_progress) progress_callback else null);
+
+            return SpeedTestResult.fromBytesPerSecond(result);
+        }
 
         // Setup download workers
         const workers = try worker_manager.setupDownloadWorkers(
@@ -353,9 +397,24 @@ pub const HTTPSpeedTester = struct {
         }
 
         // Setup worker manager
-        const num_workers = if (self.concurrent_connections == 0) 1 else @min(urls.len, self.concurrent_connections);
+        const num_workers = if (self.concurrent_connections == 0) 0 else @min(urls.len, self.concurrent_connections);
         var worker_manager = try WorkerManager.init(self.allocator, &should_stop, num_workers);
         defer worker_manager.deinit();
+
+        // Handle zero workers case (single-threaded mode)
+        if (num_workers == 0) {
+            var single_thread_meter = BandwidthMeter.init();
+            if (has_progress) {
+                try single_thread_meter.start();
+            }
+
+            var client = speed_worker.RealHttpClient.init(self.allocator);
+            defer client.deinit();
+
+            const result = try speed_worker.singleThreadedUploadTest(urls[0], upload_data, &should_stop, client.httpClient(), timer.timer_interface(), strategy.max_duration_ns, if (has_progress) progress_callback else null);
+
+            return SpeedTestResult.fromBytesPerSecond(result);
+        }
 
         // Setup upload workers
         const workers = try worker_manager.setupUploadWorkers(
