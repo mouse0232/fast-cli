@@ -47,6 +47,10 @@ pub const HTTPSpeedTester = struct {
         };
     }
 
+    pub fn setConcurrentConnections(self: *HTTPSpeedTester, count: u32) void {
+        self.concurrent_connections = count;
+    }
+
     pub fn enableIPv6(self: *HTTPSpeedTester) void {
         self.use_ipv6 = true;
     }

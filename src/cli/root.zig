@@ -50,6 +50,14 @@ const max_duration_flag = zli.Flag{
     .default_value = .{ .Int = 30 },
 };
 
+const concurrent_connections_flag = zli.Flag{
+    .name = "concurrent",
+    .description = "Number of concurrent connections to use (0 for single-threaded mode)",
+    .shortcut = "c",
+    .type = .Int,
+    .default_value = .{ .Int = 8 },
+};
+
 pub fn build(allocator: std.mem.Allocator) !*zli.Command {
     const root = try zli.Command.init(allocator, .{
         .name = "fast-cli",
@@ -62,6 +70,7 @@ pub fn build(allocator: std.mem.Allocator) !*zli.Command {
     try root.addFlag(check_upload_flag);
     try root.addFlag(json_output_flag);
     try root.addFlag(max_duration_flag);
+    try root.addFlag(concurrent_connections_flag);
 
     return root;
 }
@@ -72,9 +81,10 @@ fn run(ctx: zli.CommandContext) !void {
     const check_upload = ctx.flag("upload", bool);
     const json_output = ctx.flag("json", bool);
     const max_duration = ctx.flag("duration", i64);
+    const concurrent_connections = ctx.flag("concurrent", i64);
 
-    log.info("Config: https={}, ip_version={}, upload={}, json={}, max_duration={}s", .{
-        use_https, ip_version, check_upload, json_output, max_duration,
+    log.info("Config: https={}, ip_version={}, upload={}, json={}, max_duration={}s, concurrent_connections={}", .{
+        use_https, ip_version, check_upload, json_output, max_duration, concurrent_connections,
     });
 
     // Configure latency tester
@@ -162,6 +172,12 @@ fn run(ctx: zli.CommandContext) !void {
     } else if (ip_version == 4) {
         speed_tester.disableIPv6();
     } // else auto-detect
+    
+    // Set concurrent connections based on user input
+    if (concurrent_connections >= 0) {
+        speed_tester.setConcurrentConnections(@as(u32, @intCast(concurrent_connections)));
+    }
+    
     defer speed_tester.deinit();
 
     // Add network protocol info to results

@@ -3,6 +3,8 @@ const speed_worker = @import("speed_worker.zig");
 
 // Pure logic functions - easily testable
 pub fn calculateWorkerCount(urls: []const []const u8, concurrent_connections: usize) usize {
+    // When concurrent_connections is 0, use single-threaded mode with 1 worker
+    if (concurrent_connections == 0) return 1;
     return @min(urls.len, concurrent_connections);
 }
 
