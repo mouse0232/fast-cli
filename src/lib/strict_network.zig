@@ -36,8 +36,8 @@ pub const StrictNetwork = struct {
 
         var has_protocol_address = false;
         for (addresses.addrs) |addr| {
-            if ((protocol == 6 and addr.any.family == .inet6) or
-                (protocol == 4 and addr.any.family == .inet))
+            if ((protocol == 6 and addr.any.family == net.AddressFamily.inet6) or
+                (protocol == 4 and addr.any.family == net.AddressFamily.inet))
             {
                 has_protocol_address = true;
                 break;
