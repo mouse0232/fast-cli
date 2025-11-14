@@ -32,7 +32,14 @@ pub const HttpLatencyTester = struct {
     /// Measure latency to multiple URLs using HEAD requests
     /// Returns NetworkStats containing latency distribution, packet loss and jitter
     pub fn measureLatencyStats(self: *Self, urls: []const []const u8) !NetworkStats {
-        if (urls.len == 0) return error.NoUrlsProvided;
+        if (urls.len == 0) {
+            var stats = NetworkStats.init(self.allocator);
+            // Add default values for empty test
+            for (0..self.test_count) |_| {
+                try stats.addMeasurement(false, 0.0);
+            }
+            return stats;
+        }
 
         var stats = NetworkStats.init(self.allocator);
         errdefer stats.deinit();
