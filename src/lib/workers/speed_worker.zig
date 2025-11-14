@@ -231,6 +231,15 @@ pub const DownloadWorker = struct {
     pub fn getErrorCount(self: *const Self) u32 {
         return self.error_count.load(.monotonic);
     }
+
+    pub fn deinit(self: *Self) void {
+        // No resources need explicit cleanup in current implementation
+        // All resources are either:
+        // 1. Atomic values (automatic cleanup)
+        // 2. External references (should_stop, http_client, timer)
+        // 3. Allocator-managed memory (handled by caller if needed)
+        _ = self;
+    }
 };
 
 // Upload worker
