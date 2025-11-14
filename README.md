@@ -29,13 +29,13 @@ A blazingly fast CLI tool for testing internet speed uses fast.com v2 api. Writt
 ### Quick Install
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/mikkelam/fast-cli/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/mouse0232/fast-cli/main/install.sh | bash
 ```
 
 ### Pre-built Binaries
 For example, on an Apple Silicon Mac:
 ```bash
-curl -L https://github.com/mikkelam/fast-cli/releases/latest/download/fast-cli-aarch64-macos.tar.gz -o fast-cli.tar.gz
+curl -L https://github.com/mouse0232/fast-cli/releases/latest/download/fast-cli-aarch64-macos.tar.gz -o fast-cli.tar.gz
 tar -xzf fast-cli.tar.gz
 chmod +x fast-cli && sudo mv fast-cli /usr/local/bin/
 fast-cli --help
