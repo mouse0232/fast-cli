@@ -415,7 +415,7 @@ pub const RealHttpClient = struct {
         return self.fetchSelf(request);
     }
 
-    fn deinit(ptr: *anyopaque) void {
+    pub fn deinit(ptr: *anyopaque) void {
         const self: *Self = @ptrCast(@alignCast(ptr));
         self.deinitSelf();
     }
