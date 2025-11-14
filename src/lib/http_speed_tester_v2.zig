@@ -237,9 +237,9 @@ pub const HTTPSpeedTester = struct {
             var client = speed_worker.RealHttpClient.init(self.allocator);
             defer client.deinit();
 
-            const result = try speed_worker.singleThreadedUploadTest(urls[0], upload_data, &should_stop, client.httpClient(), timer.timer_interface(), strategy.max_duration_ns, if (has_progress) progress_callback else null);
+            const result = try speed_worker.simpleUploadTest(urls[0], upload_data, &should_stop, client.httpClient(), timer.timer_interface(), strategy.max_duration_ns, self.allocator);
 
-            return SpeedTestResult.fromBytesPerSecond(result);
+            return SpeedTestResult.fromBytesPerSecond(@as(f64, @floatFromInt(result)));
         }
 
         // Setup upload workers
@@ -317,9 +317,9 @@ pub const HTTPSpeedTester = struct {
             var client = speed_worker.RealHttpClient.init(self.allocator);
             defer client.deinit();
 
-            const result = try speed_worker.singleThreadedDownloadTest(urls[0], &should_stop, client.httpClient(), timer.timer_interface(), strategy.max_duration_ns, if (has_progress) progress_callback else null);
+            const result = try speed_worker.simpleDownloadTest(urls[0], &should_stop, client.httpClient(), timer.timer_interface(), strategy.max_duration_ns, self.allocator);
 
-            return SpeedTestResult.fromBytesPerSecond(result);
+            return SpeedTestResult.fromBytesPerSecond(@as(f64, @floatFromInt(result)));
         }
 
         // Setup download workers
