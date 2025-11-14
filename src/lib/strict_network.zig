@@ -49,12 +49,11 @@ pub const StrictNetwork = struct {
             return error.NoAddressForProtocol;
         }
 
-        // Test actual connectivity
+        // Test actual connectivity (without timeout for Zig 0.14 compatibility)
         const result = client.fetch(.{
             .method = .HEAD,
             .location = .{ .url = test_url },
             .max_append_size = 1024,
-            .timeout = 5 * std.time.ms_per_s,
         }) catch |err| {
             std.log.err("Protocol {} connectivity failed: {}", .{ protocol, err });
             return error.ProtocolConnectivityFailed;
