@@ -776,6 +776,26 @@ pub fn simpleUploadTest(
     );
     defer worker.deinit();
 
+    // Reset should_stop flag before starting
+    should_stop.store(false, .monotonic);
+
+    // Start the timer
+    const start_time = timer.read();
+
+    // Run the upload loop with time limit
     try worker.uploadLoop();
-    return worker.getBytesUploaded();
+
+    // Calculate actual duration
+    const end_time = timer.read();
+    const actual_duration_ns = end_time - start_time;
+
+    // Get total bytes uploaded
+    const total_bytes = worker.getBytesUploaded();
+
+    // If test was too short, return 0 to indicate invalid measurement
+    if (actual_duration_ns < std.time.ns_per_s * 2) { // At least 2 seconds for valid measurement
+        return 0;
+    }
+
+    return total_bytes;
 }
