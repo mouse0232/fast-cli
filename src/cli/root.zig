@@ -69,6 +69,12 @@ fn run(ctx: zli.CommandContext) !void {
         use_https, check_upload, json_output, max_duration,
     });
 
+    // Configure latency tester
+    var latency_tester = HttpLatencyTester.init(std.heap.smp_allocator);
+    defer latency_tester.deinit();
+    latency_tester.setTestCount(10); // Perform 10 latency tests for stats
+    latency_tester.setTimeout(2000); // 2 second timeout per test
+
     var fast = Fast.init(std.heap.smp_allocator, use_https);
     defer fast.deinit();
 
@@ -90,19 +96,16 @@ fn run(ctx: zli.CommandContext) !void {
         log.debug("URL: {s}", .{url});
     }
 
-    // Measure latency first
-    var latency_tester = HttpLatencyTester.init(std.heap.smp_allocator);
-    defer latency_tester.deinit();
-
-    const latency_ms = if (!json_output) blk: {
-        try ctx.spinner.start(.{}, "Measuring latency...", .{});
-        const result = latency_tester.measureLatency(urls) catch |err| {
+    // Measure latency with stats
+    const latency_stats = if (!json_output) blk: {
+        try ctx.spinner.start(.{}, "Measuring latency (10 tests)...", .{});
+        const result = latency_tester.measureLatencyStats(urls) catch |err| {
             log.err("Latency test failed: {}", .{err});
             break :blk null;
         };
         break :blk result;
     } else blk: {
-        break :blk latency_tester.measureLatency(urls) catch null;
+        break :blk latency_tester.measureLatencyStats(urls) catch null;
     };
 
     if (!json_output) {
@@ -149,7 +152,8 @@ fn run(ctx: zli.CommandContext) !void {
             // JSON mode: clean output only
             break :blk speed_tester.measure_upload_speed_stability(urls, criteria) catch |err| {
                 log.err("Upload test failed: {}", .{err});
-                try outputJson(download_result.speed.value, latency_ms, null, "Upload test failed");
+                const latency_value = if (latency_stats) |stats| stats.meanLatency() else null;
+                try outputJson(download_result.speed.value, latency_value, null, "Upload test failed");
                 return;
             };
         } else blk: {
@@ -164,11 +168,37 @@ fn run(ctx: zli.CommandContext) !void {
 
     // Output results
     if (!json_output) {
-        if (latency_ms) |ping| {
+        if (latency_stats) |stats| {
             if (upload_result) |up| {
-                try ctx.spinner.succeed("🏓 {d:.0}ms | ⬇️ Download: {d:.1} {s} | ⬆️ Upload: {d:.1} {s}", .{ ping, download_result.speed.value, download_result.speed.unit.toString(), up.speed.value, up.speed.unit.toString() });
+                try ctx.spinner.succeed(
+                    \\🏓 Latency: {d:.0}ms (min: {d:.0}ms, max: {d:.0}ms)
+                    \\📊 Jitter: {d:.1}ms | 📉 Loss: {d:.1}%
+                    \\⬇️ Download: {d:.1} {s} | ⬆️ Upload: {d:.1} {s}
+                , .{
+                    stats.meanLatency() orelse 0.0,
+                    stats.minLatency() orelse 0.0,
+                    stats.maxLatency() orelse 0.0,
+                    stats.jitter(),
+                    stats.packetLossRate(),
+                    download_result.speed.value,
+                    download_result.speed.unit.toString(),
+                    up.speed.value,
+                    up.speed.unit.toString(),
+                });
             } else {
-                try ctx.spinner.succeed("🏓 {d:.0}ms | ⬇️ Download: {d:.1} {s}", .{ ping, download_result.speed.value, download_result.speed.unit.toString() });
+                try ctx.spinner.succeed(
+                    \\🏓 Latency: {d:.0}ms (min: {d:.0}ms, max: {d:.0}ms)
+                    \\📊 Jitter: {d:.1}ms | 📉 Loss: {d:.1}%
+                    \\⬇️ Download: {d:.1} {s}
+                , .{
+                    stats.meanLatency() orelse 0.0,
+                    stats.minLatency() orelse 0.0,
+                    stats.maxLatency() orelse 0.0,
+                    stats.jitter(),
+                    stats.packetLossRate(),
+                    download_result.speed.value,
+                    download_result.speed.unit.toString(),
+                });
             }
         } else {
             if (upload_result) |up| {
@@ -179,7 +209,15 @@ fn run(ctx: zli.CommandContext) !void {
         }
     } else {
         const upload_speed = if (upload_result) |up| up.speed.value else null;
-        try outputJson(download_result.speed.value, latency_ms, upload_speed, null);
+
+        if (latency_stats) |stats| {
+            const latency_ms = stats.meanLatency();
+            const jitter_ms = stats.jitter();
+            const packet_loss = stats.packetLossRate();
+            try outputJsonWithStats(download_result.speed.value, latency_ms, upload_speed, jitter_ms, packet_loss, null);
+        } else {
+            try outputJsonWithStats(download_result.speed.value, null, upload_speed, null, null, null);
+        }
     }
 }
 
@@ -193,18 +231,50 @@ fn updateUploadSpinnerText(spinner: anytype, measurement: SpeedMeasurement) void
     spinner.updateText("⬆️ {d:.1} {s}", .{ measurement.value, measurement.unit.toString() }) catch {};
 }
 
-fn outputJson(download_mbps: ?f64, ping_ms: ?f64, upload_mbps: ?f64, error_message: ?[]const u8) !void {
+fn outputJsonWithStats(
+    download_mbps: ?f64,
+    ping_ms: ?f64,
+    upload_mbps: ?f64,
+    jitter_ms: ?f64,
+    packet_loss: ?f64,
+    error_message: ?[]const u8,
+) !void {
     const stdout = std.io.getStdOut().writer();
 
     var download_buf: [32]u8 = undefined;
     var ping_buf: [32]u8 = undefined;
     var upload_buf: [32]u8 = undefined;
+    var jitter_buf: [32]u8 = undefined;
+    var loss_buf: [32]u8 = undefined;
     var error_buf: [256]u8 = undefined;
 
     const download_str = if (download_mbps) |d| try std.fmt.bufPrint(&download_buf, "{d:.1}", .{d}) else "null";
     const ping_str = if (ping_ms) |p| try std.fmt.bufPrint(&ping_buf, "{d:.1}", .{p}) else "null";
     const upload_str = if (upload_mbps) |u| try std.fmt.bufPrint(&upload_buf, "{d:.1}", .{u}) else "null";
+    const jitter_str = if (jitter_ms) |j| try std.fmt.bufPrint(&jitter_buf, "{d:.1}", .{j}) else "null";
+    const loss_str = if (packet_loss) |l| try std.fmt.bufPrint(&loss_buf, "{d:.1}", .{l}) else "null";
     const error_str = if (error_message) |e| try std.fmt.bufPrint(&error_buf, "\"{s}\"", .{e}) else "null";
 
-    try stdout.print("{{\"download_mbps\": {s}, \"ping_ms\": {s}, \"upload_mbps\": {s}, \"error\": {s}}}\n", .{ download_str, ping_str, upload_str, error_str });
+    try stdout.print(
+        \\{{
+        \\  "download_mbps": {s},
+        \\  "ping_ms": {s},
+        \\  "upload_mbps": {s},
+        \\  "jitter_ms": {s},
+        \\  "packet_loss": {s},
+        \\  "error": {s}
+        \\}}
+    , .{
+        download_str,
+        ping_str,
+        upload_str,
+        jitter_str,
+        loss_str,
+        error_str,
+    });
+}
+
+// Backward compatibility for old calls
+fn outputJson(download_mbps: ?f64, ping_ms: ?f64, upload_mbps: ?f64, error_message: ?[]const u8) !void {
+    try outputJsonWithStats(download_mbps, ping_ms, upload_mbps, null, null, error_message);
 }
