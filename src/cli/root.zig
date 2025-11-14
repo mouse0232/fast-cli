@@ -84,11 +84,16 @@ fn run(ctx: zli.CommandContext) !void {
     latency_tester.setTimeout(2000); // 2 second timeout per test
 
     var fast = Fast.init(std.heap.smp_allocator, use_https);
+
+    // Strict protocol enforcement
     if (ip_version == 6) {
         fast.enableIPv6();
+        std.log.info("Strict IPv6 mode enabled", .{});
     } else if (ip_version == 4) {
         fast.disableIPv6();
-    } // else auto-detect
+        std.log.info("Strict IPv4 mode enabled", .{});
+    } // else auto-detect (default behavior)
+
     defer fast.deinit();
 
     const urls = fast.get_urls(5) catch |err| {
@@ -125,7 +130,7 @@ fn run(ctx: zli.CommandContext) !void {
         try ctx.spinner.start(.{}, "Measuring download speed...", .{});
     }
 
-    // Initialize speed tester
+    // Initialize speed tester with strict protocol enforcement
     var speed_tester = HTTPSpeedTester.init(std.heap.smp_allocator);
     if (ip_version == 6) {
         speed_tester.enableIPv6();
@@ -133,6 +138,9 @@ fn run(ctx: zli.CommandContext) !void {
         speed_tester.disableIPv6();
     } // else auto-detect
     defer speed_tester.deinit();
+
+    // Add network protocol info to results
+    const protocol_info = if (ip_version == 6) "IPv6" else if (ip_version == 4) "IPv4" else "Auto";
 
     // Use Fast.com-style stability detection by default
     const criteria = StabilityCriteria{
@@ -183,16 +191,17 @@ fn run(ctx: zli.CommandContext) !void {
             };
         };
     }
-
-    // Output results
+    // Output results with strict protocol info
     if (!json_output) {
         if (latency_stats) |stats| {
             if (upload_result) |up| {
                 try ctx.spinner.succeed(
+                    \\🔒 Network: {s}
                     \\🏓 Latency: {d:.0}ms (min: {d:.0}ms, max: {d:.0}ms)
                     \\📊 Jitter: {d:.1}ms | 📉 Loss: {d:.1}%
                     \\⬇️ Download: {d:.1} {s} | ⬆️ Upload: {d:.1} {s}
                 , .{
+                    protocol_info,
                     stats.meanLatency() orelse 0.0,
                     stats.minLatency() orelse 0.0,
                     stats.maxLatency() orelse 0.0,
@@ -205,10 +214,12 @@ fn run(ctx: zli.CommandContext) !void {
                 });
             } else {
                 try ctx.spinner.succeed(
+                    \\🔒 Network: {s}
                     \\🏓 Latency: {d:.0}ms (min: {d:.0}ms, max: {d:.0}ms)
                     \\📊 Jitter: {d:.1}ms | 📉 Loss: {d:.1}%
                     \\⬇️ Download: {d:.1} {s}
                 , .{
+                    protocol_info,
                     stats.meanLatency() orelse 0.0,
                     stats.minLatency() orelse 0.0,
                     stats.maxLatency() orelse 0.0,
@@ -220,9 +231,9 @@ fn run(ctx: zli.CommandContext) !void {
             }
         } else {
             if (upload_result) |up| {
-                try ctx.spinner.succeed("⬇️ Download: {d:.1} {s} | ⬆️ Upload: {d:.1} {s}", .{ download_result.speed.value, download_result.speed.unit.toString(), up.speed.value, up.speed.unit.toString() });
+                try ctx.spinner.succeed("🔒 {s} | ⬇️ Download: {d:.1} {s} | ⬆️ Upload: {d:.1} {s}", .{ protocol_info, download_result.speed.value, download_result.speed.unit.toString(), up.speed.value, up.speed.unit.toString() });
             } else {
-                try ctx.spinner.succeed("⬇️ Download: {d:.1} {s}", .{ download_result.speed.value, download_result.speed.unit.toString() });
+                try ctx.spinner.succeed("?? {s} | ⬇️ Download: {d:.1} {s}", .{ protocol_info, download_result.speed.value, download_result.speed.unit.toString() });
             }
         }
     } else {
