@@ -287,6 +287,15 @@ pub const UploadWorker = struct {
         };
     }
 
+    pub fn deinit(self: *Self) void {
+        // No resources need explicit cleanup in current implementation
+        // All resources are either:
+        // 1. Atomic values (automatic cleanup)
+        // 2. External references (should_stop, http_client, timer)
+        // 3. Allocator-managed memory (handled by caller if needed)
+        _ = self;
+    }
+
     pub fn run(self: *Self) void {
         self.uploadLoop() catch |err| {
             print("Upload worker {} error: {}\n", .{ self.config.worker_id, err });
