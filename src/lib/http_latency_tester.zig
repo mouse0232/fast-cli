@@ -1,8 +1,11 @@
 const std = @import("std");
 const http = std.http;
+const NetworkStats = @import("network_stats.zig").NetworkStats;
 
 pub const HttpLatencyTester = struct {
     allocator: std.mem.Allocator,
+    test_count: u32 = 10, // Default number of latency tests
+    timeout_ms: u32 = 2000, // Timeout per test in milliseconds
 
     const Self = @This();
 
@@ -16,28 +19,44 @@ pub const HttpLatencyTester = struct {
         _ = self;
     }
 
+    /// Configure number of latency tests to perform
+    pub fn setTestCount(self: *Self, count: u32) void {
+        self.test_count = count;
+    }
+
+    /// Configure timeout per test in milliseconds
+    pub fn setTimeout(self: *Self, timeout_ms: u32) void {
+        self.timeout_ms = timeout_ms;
+    }
+
     /// Measure latency to multiple URLs using HEAD requests
-    /// Returns median latency in milliseconds, or null if all requests failed
-    pub fn measureLatency(self: *Self, urls: []const []const u8) !?f64 {
-        if (urls.len == 0) return null;
+    /// Returns NetworkStats containing latency distribution, packet loss and jitter
+    pub fn measureLatencyStats(self: *Self, urls: []const []const u8) !NetworkStats {
+        if (urls.len == 0) return error.NoUrlsProvided;
 
-        var latencies = std.ArrayList(f64).init(self.allocator);
-        defer latencies.deinit();
+        var stats = NetworkStats.init(self.allocator);
+        errdefer stats.deinit();
 
-        // Test each URL
+        // Test each URL multiple times
         for (urls) |url| {
-            if (self.measureSingleUrl(url)) |latency_ms| {
-                try latencies.append(latency_ms);
-            } else |_| {
-                // Ignore errors, continue with other URLs
-                continue;
+            for (0..self.test_count) |_| {
+                const result = self.measureSingleUrl(url) catch {
+                    try stats.addMeasurement(false, 0.0);
+                    continue;
+                };
+                try stats.addMeasurement(true, result);
             }
         }
 
-        if (latencies.items.len == 0) return null;
+        return stats;
+    }
 
-        // Return median latency
-        return self.calculateMedian(latencies.items);
+    /// Legacy method - returns median latency for backward compatibility
+    pub fn measureLatency(self: *Self, urls: []const []const u8) !?f64 {
+        var stats = try self.measureLatencyStats(urls);
+        defer stats.deinit();
+
+        return stats.meanLatency();
     }
 
     /// Measure latency to a single URL using connection reuse method
@@ -83,14 +102,18 @@ pub const HttpLatencyTester = struct {
 
         const end_time = std.time.nanoTimestamp();
 
-        // Convert to milliseconds
+        // Check for timeout - if request took longer than timeout, consider it failed
         const latency_ns = end_time - start_time;
         const latency_ms = @as(f64, @floatFromInt(latency_ns)) / std.time.ns_per_ms;
+
+        if (latency_ms > @as(f64, @floatFromInt(self.timeout_ms))) {
+            return error.ConnectionTimeout;
+        }
 
         return latency_ms;
     }
 
-    /// Calculate median from array of latencies
+    /// Legacy method - kept for backward compatibility
     fn calculateMedian(self: *Self, latencies: []f64) f64 {
         _ = self;
 
