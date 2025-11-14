@@ -172,12 +172,12 @@ fn run(ctx: zli.CommandContext) !void {
     } else if (ip_version == 4) {
         speed_tester.disableIPv6();
     } // else auto-detect
-    
+
     // Set concurrent connections based on user input
     if (concurrent_connections >= 0) {
         speed_tester.setConcurrentConnections(@as(u32, @intCast(concurrent_connections)));
     }
-    
+
     defer speed_tester.deinit();
 
     // Add network protocol info to results
