@@ -6,6 +6,7 @@ test "all" {
     _ = @import("lib/bandwidth.zig");
     _ = @import("lib/http_latency_tester.zig");
     _ = @import("lib/workers/speed_worker.zig");
+    _ = @import("lib/network_stats.zig");
 
     // Dedicated test modules
     _ = @import("lib/tests/measurement_strategy_test.zig");
