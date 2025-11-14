@@ -12,12 +12,18 @@ const SpeedMeasurement = @import("../lib/bandwidth.zig").SpeedMeasurement;
 const progress = @import("../lib/progress.zig");
 const HttpLatencyTester = @import("../lib/http_latency_tester.zig").HttpLatencyTester;
 const log = std.log.scoped(.cli);
-
 const https_flag = zli.Flag{
     .name = "https",
     .description = "Use https when connecting to fast.com",
     .type = .Bool,
     .default_value = .{ .Bool = true },
+};
+
+const ipv_flag = zli.Flag{
+    .name = "ipv",
+    .description = "Specify IP version (4 or 6), default: auto-detect",
+    .type = .Int,
+    .default_value = .{ .Int = 0 }, // 0 means auto
 };
 
 const check_upload_flag = zli.Flag{
@@ -38,7 +44,7 @@ const json_output_flag = zli.Flag{
 
 const max_duration_flag = zli.Flag{
     .name = "duration",
-    .description = "Maximum test duration in seconds (uses CoV stability detection by default)",
+    .description = "Maximum test duration in seconds (uses Fast.com-style stability detection by default)",
     .shortcut = "d",
     .type = .Int,
     .default_value = .{ .Int = 30 },
@@ -52,6 +58,7 @@ pub fn build(allocator: std.mem.Allocator) !*zli.Command {
     }, run);
 
     try root.addFlag(https_flag);
+    try root.addFlag(ipv_flag);
     try root.addFlag(check_upload_flag);
     try root.addFlag(json_output_flag);
     try root.addFlag(max_duration_flag);
@@ -61,12 +68,13 @@ pub fn build(allocator: std.mem.Allocator) !*zli.Command {
 
 fn run(ctx: zli.CommandContext) !void {
     const use_https = ctx.flag("https", bool);
+    const ip_version = ctx.flag("ipv", i64);
     const check_upload = ctx.flag("upload", bool);
     const json_output = ctx.flag("json", bool);
     const max_duration = ctx.flag("duration", i64);
 
-    log.info("Config: https={}, upload={}, json={}, max_duration={}s", .{
-        use_https, check_upload, json_output, max_duration,
+    log.info("Config: https={}, ip_version={}, upload={}, json={}, max_duration={}s", .{
+        use_https, ip_version, check_upload, json_output, max_duration,
     });
 
     // Configure latency tester
@@ -76,6 +84,11 @@ fn run(ctx: zli.CommandContext) !void {
     latency_tester.setTimeout(2000); // 2 second timeout per test
 
     var fast = Fast.init(std.heap.smp_allocator, use_https);
+    if (ip_version == 6) {
+        fast.enableIPv6();
+    } else if (ip_version == 4) {
+        fast.disableIPv6();
+    } // else auto-detect
     defer fast.deinit();
 
     const urls = fast.get_urls(5) catch |err| {
@@ -114,6 +127,11 @@ fn run(ctx: zli.CommandContext) !void {
 
     // Initialize speed tester
     var speed_tester = HTTPSpeedTester.init(std.heap.smp_allocator);
+    if (ip_version == 6) {
+        speed_tester.enableIPv6();
+    } else if (ip_version == 4) {
+        speed_tester.disableIPv6();
+    } // else auto-detect
     defer speed_tester.deinit();
 
     // Use Fast.com-style stability detection by default

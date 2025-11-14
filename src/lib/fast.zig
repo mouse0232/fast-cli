@@ -39,6 +39,7 @@ pub const Fast = struct {
     client: http.Client,
     arena: std.heap.ArenaAllocator,
     use_https: bool,
+    use_ipv6: bool = false,
 
     pub fn init(allocator: std.mem.Allocator, use_https: bool) Fast {
         const arena = std.heap.ArenaAllocator.init(allocator);
@@ -47,6 +48,14 @@ pub const Fast = struct {
             .arena = arena,
             .use_https = use_https,
         };
+    }
+
+    pub fn enableIPv6(self: *Fast) void {
+        self.use_ipv6 = true;
+    }
+
+    pub fn disableIPv6(self: *Fast) void {
+        self.use_ipv6 = false;
     }
 
     pub fn deinit(self: *Fast) void {

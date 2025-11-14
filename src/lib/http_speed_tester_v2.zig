@@ -37,6 +37,7 @@ pub const HTTPSpeedTester = struct {
     allocator: std.mem.Allocator,
     concurrent_connections: u32,
     progress_update_interval_ms: u32,
+    use_ipv6: bool = false,
 
     pub fn init(allocator: std.mem.Allocator) HTTPSpeedTester {
         return HTTPSpeedTester{
@@ -44,6 +45,14 @@ pub const HTTPSpeedTester = struct {
             .concurrent_connections = 8, // Default 8 concurrent connections
             .progress_update_interval_ms = 100, // Default 100ms updates
         };
+    }
+
+    pub fn enableIPv6(self: *HTTPSpeedTester) void {
+        self.use_ipv6 = true;
+    }
+
+    pub fn disableIPv6(self: *HTTPSpeedTester) void {
+        self.use_ipv6 = false;
     }
 
     pub fn deinit(self: *HTTPSpeedTester) void {
