@@ -149,7 +149,7 @@ pub const HTTPSpeedTester = struct {
         }
 
         // Setup worker manager
-        const num_workers = @min(urls.len, self.concurrent_connections);
+        const num_workers = if (self.concurrent_connections == 0) 1 else @min(urls.len, self.concurrent_connections);
         var worker_manager = try WorkerManager.init(self.allocator, &should_stop, num_workers);
         defer worker_manager.deinit();
 
@@ -215,7 +215,7 @@ pub const HTTPSpeedTester = struct {
         }
 
         // Setup worker manager
-        const num_workers = @min(urls.len, self.concurrent_connections);
+        const num_workers = if (self.concurrent_connections == 0) 1 else @min(urls.len, self.concurrent_connections);
         var worker_manager = try WorkerManager.init(self.allocator, &should_stop, num_workers);
         defer worker_manager.deinit();
 
@@ -280,7 +280,7 @@ pub const HTTPSpeedTester = struct {
         }
 
         // Setup worker manager
-        const num_workers = @min(urls.len, self.concurrent_connections);
+        const num_workers = if (self.concurrent_connections == 0) 1 else @min(urls.len, self.concurrent_connections);
         var worker_manager = try WorkerManager.init(self.allocator, &should_stop, num_workers);
         defer worker_manager.deinit();
 
@@ -353,7 +353,7 @@ pub const HTTPSpeedTester = struct {
         }
 
         // Setup worker manager
-        const num_workers = @min(urls.len, self.concurrent_connections);
+        const num_workers = if (self.concurrent_connections == 0) 1 else @min(urls.len, self.concurrent_connections);
         var worker_manager = try WorkerManager.init(self.allocator, &should_stop, num_workers);
         defer worker_manager.deinit();
 
