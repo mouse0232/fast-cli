@@ -58,7 +58,7 @@ pub const StrictNetwork = struct {
             std.log.err("Protocol {} connectivity failed: {}", .{ protocol, err });
             return error.ProtocolConnectivityFailed;
         };
-        defer result.deinit();
+        // Zig 0.14.0的FetchResult不需要deinit
 
         if (result.status != .ok) {
             return error.ProtocolTestFailed;
