@@ -83,6 +83,31 @@ fn run(ctx: zli.CommandContext) !void {
     latency_tester.setTestCount(10); // Perform 10 latency tests for stats
     latency_tester.setTimeout(2000); // 2 second timeout per test
 
+    // First verify network connectivity for strict modes
+    if (ip_version == 6) {
+        std.log.info("Verifying IPv6 connectivity...", .{});
+        if (!verifyIPv6Connectivity()) {
+            if (!json_output) {
+                try ctx.spinner.fail("❌ IPv6 connectivity test failed - your network may not support IPv6", .{});
+            } else {
+                try outputJson(null, null, null, "IPv6 connectivity test failed");
+            }
+            return;
+        }
+        std.log.info("IPv6 connectivity confirmed", .{});
+    } else if (ip_version == 4) {
+        std.log.info("Verifying IPv4 connectivity...", .{});
+        if (!verifyIPv4Connectivity()) {
+            if (!json_output) {
+                try ctx.spinner.fail("❌ IPv4 connectivity test failed", .{});
+            } else {
+                try outputJson(null, null, null, "IPv4 connectivity test failed");
+            }
+            return;
+        }
+        std.log.info("IPv4 connectivity confirmed", .{});
+    }
+
     var fast = Fast.init(std.heap.smp_allocator, use_https);
 
     // Strict protocol enforcement
@@ -233,7 +258,7 @@ fn run(ctx: zli.CommandContext) !void {
             if (upload_result) |up| {
                 try ctx.spinner.succeed("🔒 {s} | ⬇️ Download: {d:.1} {s} | ⬆️ Upload: {d:.1} {s}", .{ protocol_info, download_result.speed.value, download_result.speed.unit.toString(), up.speed.value, up.speed.unit.toString() });
             } else {
-                try ctx.spinner.succeed("?? {s} | ⬇️ Download: {d:.1} {s}", .{ protocol_info, download_result.speed.value, download_result.speed.unit.toString() });
+                try ctx.spinner.succeed("🔒 {s} | ⬇️ Download: {d:.1} {s}", .{ protocol_info, download_result.speed.value, download_result.speed.unit.toString() });
             }
         }
     } else {
@@ -306,4 +331,15 @@ fn outputJsonWithStats(
 // Backward compatibility for old calls
 fn outputJson(download_mbps: ?f64, ping_ms: ?f64, upload_mbps: ?f64, error_message: ?[]const u8) !void {
     try outputJsonWithStats(download_mbps, ping_ms, upload_mbps, null, null, error_message);
+}
+
+const StrictNetwork = @import("../lib/strict_network.zig");
+
+// Strict network connectivity verification
+fn verifyIPv6Connectivity() bool {
+    return StrictNetwork.verifyProtocolConnectivity(std.heap.smp_allocator, 6);
+}
+
+fn verifyIPv4Connectivity() bool {
+    return StrictNetwork.verifyProtocolConnectivity(std.heap.smp_allocator, 4);
 }
