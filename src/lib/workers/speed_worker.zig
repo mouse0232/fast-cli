@@ -415,9 +415,15 @@ pub const RealHttpClient = struct {
         return self.fetchSelf(request);
     }
 
-    pub fn deinit(ptr: *anyopaque) void {
+    // VTable-compatible deinit function (for HttpClient interface)
+    pub fn deinitVTable(ptr: *anyopaque) void {
         const self: *Self = @ptrCast(@alignCast(ptr));
-        self.deinitSelf();
+        self.deinit();
+    }
+
+    // Direct deinit method for RealHttpClient instances
+    pub fn deinit(self: *Self) void {
+        self.client.deinit();
     }
 
     fn fetchSelf(self: *Self, request: FetchRequest) !FetchResponse {
