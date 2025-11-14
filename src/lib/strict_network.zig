@@ -77,10 +77,11 @@ pub fn verifyProtocolConnectivity(allocator: std.mem.Allocator, protocol: u8) bo
     var network = StrictNetwork.init(allocator);
     defer network.deinit();
 
-    return network.testProtocolConnectivity(protocol) catch |err| {
+    network.testProtocolConnectivity(protocol) catch |err| {
         std.log.debug("Protocol {} verification failed: {}", .{ protocol, err });
         return false;
     };
+    return true;
 }
 
 /// Test module
