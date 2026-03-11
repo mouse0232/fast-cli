@@ -1,19 +1,18 @@
 # fast-cli
 
-[![Zig](https://img.shields.io/badge/Zig-0.14.0+-orange.svg)](https://ziglang.org/)
+[![Go](https://img.shields.io/badge/Go-1.21+-00ADD8.svg)](https://golang.org/)
 [![CI](https://github.com/mikkelam/fast-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/mikkelam/fast-cli/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A blazingly fast CLI tool for testing internet speed uses fast.com v2 api. Written in Zig for maximum performance.
+A blazingly fast CLI tool for testing internet speed using fast.com API. Written in Go for cross-platform compatibility.
 
-⚡ **1.2 MB binary** • 🚀 **Zero runtime deps** • 📊 **Smart stability detection** • 🌐 **IPv6 Support**
+## Features
 
-## New Features
-
-- **Strict IPv6/IPv4 Mode**: Force test using specific IP protocol version
-- **Enhanced Network Stats**: Jitter and packet loss measurement
+- **Download & Upload Speed**: Test your connection speed
+- **IPv4/IPv6 Support**: Force test using specific IP protocol version
+- **Enhanced Network Stats**: Jitter and latency measurement
 - **Concurrent Connections**: Configurable concurrent connections for speed tests
-- **Improved JSON Output**: More detailed network statistics
+- **JSON Output**: Machine-readable results
 
 ## Demo
 
@@ -21,17 +20,16 @@ A blazingly fast CLI tool for testing internet speed uses fast.com v2 api. Writt
 
 ## Why fast-cli?
 
-- **Tiny binary**: Just 1.2 MB, no runtime dependencies
-- **Blazing fast**: Concurrent connections with adaptive chunk sizing
-- **Cross-platform**: Single binary for Linux, macOS
-- **Smart stopping**: Uses Coefficient of Variation (CoV) algorithm for adaptive test duration
-- **Protocol Aware**: IPv6 and IPv4 protocol verification and enforcement
+- **Cross-platform**: Single binary for Linux, macOS, Windows
+- **Fast**: Concurrent connections with connection pooling
+- **Simple**: Zero configuration required
+- **Protocol Aware**: IPv6 and IPv4 protocol verification
 
 ## Supported Platforms
 
 - **Linux**: x86_64, aarch64 (ARM64)
-- **macOS**: x86_64 (Intel), aarch64 (aka Apple Silicon)
-- **Windows**: x86_64 (Experimental)
+- **macOS**: x86_64 (Intel), aarch64 (Apple Silicon)
+- **Windows**: x86_64
 
 ## Installation
 
@@ -42,6 +40,7 @@ curl -sSL https://raw.githubusercontent.com/mouse0232/fast-cli/main/install.sh |
 ```
 
 ### Pre-built Binaries
+
 For example, on an Apple Silicon Mac:
 ```bash
 curl -L https://github.com/mouse0232/fast-cli/releases/latest/download/fast-cli-aarch64-macos.tar.gz -o fast-cli.tar.gz
@@ -51,74 +50,86 @@ fast-cli --help
 ```
 
 ### Build from Source
+
 ```bash
 git clone https://github.com/mikkelam/fast-cli.git
 cd fast-cli
-zig build -Doptimize=ReleaseSafe
+go build -o fast-cli ./cmd/fast-cli/
 ```
 
 ## Usage
-```console
-❯ ./fast-cli --help
-Estimate connection speed using fast.com
-v0.1.0
 
+```console
+$ ./fast-cli --help
 Usage: fast-cli [options]
 
-Flags:
- -u, --upload      Check upload speed as well [Bool] (default: false)
- -d, --duration    Maximum test duration in seconds [Int] (default: 30)
- -c, --concurrent  Number of concurrent connections (0=single-thread) [Int] (default: 8)
-     --ipv        Specify IP version (4 or 6), 0=auto [Int] (default: 0)
-     --https      Use https when connecting to fast.com [Bool] (default: true)
- -j, --json        Output results in JSON format [Bool] (default: false)
- -h, --help        Shows the help for a command [Bool] (default: false)
+Options:
+  -u, --upload      Check upload speed as well
+  -d, --duration    Maximum test duration in seconds (default: 30)
+  -c, --concurrent  Number of concurrent connections (default: 8)
+      --ipv        Specify IP version (4 or 6), 0=auto (default: 0)
+      --https      Use https when connecting to fast.com (default: true)
+  -j, --json        Output results in JSON format
+  -h, --help        Shows the help for a command
 ```
 
-## Advanced Features
+## Examples
 
-### IPv6 Testing
+### Basic Speed Test
+
 ```bash
-# Force IPv6 testing with connectivity verification
-fast-cli --ipv 6
-
-# Force IPv4 testing
-fast-cli --ipv 4
-
-# Auto-detect protocol (default)
-fast-cli --ipv 0
+./fast-cli
 ```
 
-### Custom Concurrent Connections
-```bash
-# Single-threaded mode
-fast-cli --concurrent 0
+### Test with Upload Speed
 
-# High concurrency for faster results
-fast-cli --concurrent 16
+```bash
+./fast-cli --upload
 ```
 
-### Quick Tests
-```bash
-# Quick 15-second test
-fast-cli -d 15
+### IPv6 Only
 
-# Quick test with upload and JSON output
-fast-cli -u -d 20 -j
+```bash
+./fast-cli --ipv 6
+```
+
+### IPv4 Only
+
+```bash
+./fast-cli --ipv 4
+```
+
+### JSON Output
+
+```bash
+./fast-cli --json
+```
+
+### Quick 15-second Test
+
+```bash
+./fast-cli -d 15
+```
+
+### High Concurrency
+
+```bash
+./fast-cli -c 16
 ```
 
 ## Example Output
 
 ```console
-$ fast-cli --upload --ipv 6
-🔒 IPv6 | 🏓 Latency: 25ms (min: 18ms, max: 42ms)
-📊 Jitter: 3.2ms | 📉 Loss: 0.0%
-⬇️ Download: 213.7 Mbps | ⬆️ Upload: 82.1 Mbps
+$ ./fast-cli --upload --ipv 6
+  Network: IPv6
+  Latency: 25ms (min: 18ms, max: 42ms)
+  Jitter: 3.2ms
+  Download: 213.7 Mbps | Upload: 82.1 Mbps
 
-$ fast-cli -d 15 -c 4
-🔒 Auto | 🏓 Latency: 22ms | ⬇️ Download: 155.0 Mbps
+$ ./fast-cli -d 15 -c 4
+  Auto | Download: 155.0 Mbps
 
-$ fast-cli -j --ipv 4
+$ ./fast-cli -j --ipv 4
 {
   "download_mbps": 221.4,
   "upload_mbps": 92.8,
@@ -132,40 +143,34 @@ $ fast-cli -j --ipv 4
 
 ## Network Statistics
 
-fast-cli now provides detailed network quality metrics:
-
 - **Latency**: Average, minimum, and maximum round-trip time
 - **Jitter**: Variation in latency measurements
-- **Packet Loss**: Percentage of failed connectivity tests
 - **Protocol**: Network protocol used for testing (IPv4/IPv6/Auto)
 
 ## Development
 
 ```bash
-# Debug build
-zig build
+# Build
+go build -o fast-cli ./cmd/fast-cli/
 
-# Run all tests
-zig build test
+# Run
+./fast-cli
 
-# Test specific components
-zig test src/lib/network_stats_test.zig
-zig test src/lib/worker_manager_test.zig
-
-# Release build with optimizations
-zig build -Doptimize=ReleaseFast
-
-# Cross-compilation for different targets
-zig build -Dtarget=x86_64-linux -Doptimize=ReleaseSafe
+# Cross-compilation
+GOOS=linux GOARCH=amd64 go build -o fast-cli-linux-amd64 ./cmd/fast-cli/
+GOOS=darwin GOARCH=arm64 go build -o fast-cli-darwin-arm64 ./cmd/fast-cli/
 ```
 
-## Technology
+## Project Structure
 
-Built with Zig's standard library for maximum performance:
-- Concurrent HTTP client with connection pooling
-- Async I/O for efficient resource usage
-- Zero-copy parsing where possible
-- Memory safety with compile-time checks
+```
+.
+├── cmd/
+│   └── fast-cli/
+│       └── main.go          # CLI entry point
+├── go.mod                   # Go module definition
+└── README.md                # This file
+```
 
 ## License
 
